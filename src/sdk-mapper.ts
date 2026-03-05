@@ -98,9 +98,12 @@ function mapUserMessage(
           .map((c: any) => c.text)
           .join('\n')
       }
+      // tool_use_id is an opaque SDK ID (e.g. "toolu_01ABC..."), not the
+      // tool name. Use 'tool' as placeholder — the primary tool_result path
+      // is mapToolUseSummary which provides the actual tool name.
       events.push({
         type: 'tool_result',
-        name: block.tool_use_id ?? 'tool',
+        name: 'tool',
         output,
       })
     }

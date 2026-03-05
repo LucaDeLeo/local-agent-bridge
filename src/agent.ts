@@ -12,14 +12,14 @@ import { mapSdkMessage } from './sdk-mapper'
 
 function thinkingToMaxTokens(level: ThinkingLevel): number | undefined {
   switch (level) {
-    case 'off':
-      return undefined
-    case 'adaptive':
-      return undefined
     case 'high':
       return 10000
     case 'max':
       return 32000
+    default:
+      // 'off' and 'adaptive' both leave maxThinkingTokens unset,
+      // letting the Agent SDK use its default (adaptive) behavior.
+      return undefined
   }
 }
 

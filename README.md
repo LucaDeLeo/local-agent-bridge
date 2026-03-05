@@ -179,7 +179,7 @@ The `sendMessage` function accepts optional `model` and `thinking` parameters:
 sendMessage('Analyze this data', 'claude-opus-4-6', 'high')
 ```
 
-**Models:** `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`
+**Models:** `claude-opus-4-6`, `claude-sonnet-4-6`, `claude-haiku-4-5`
 
 **Thinking levels:** `off`, `adaptive` (default), `high`, `max`
 
