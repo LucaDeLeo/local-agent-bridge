@@ -29,12 +29,9 @@ export function useLocalAgent(config: UseLocalAgentConfig): UseLocalAgentReturn 
   const [streamParts, setStreamParts] = useState<ContentPart[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
 
-  // Refs for streaming parts and messages (avoid stale closures)
+  // Ref for streaming parts (avoid stale closures in WS handler)
   const partsRef = useRef<ContentPart[]>([])
-  const messagesRef = useRef<AgentMessage[]>(messages)
-  useEffect(() => {
-    messagesRef.current = messages
-  }, [messages])
+  const isStreamingRef = useRef(false)
 
   // Stable refs for config callbacks
   const persistRef = useRef(persistMessages)
@@ -68,6 +65,21 @@ export function useLocalAgent(config: UseLocalAgentConfig): UseLocalAgentReturn 
 
   const persist = (updatedMessages: AgentMessage[]) => {
     persistRef.current?.(updatedMessages)
+  }
+
+  const appendMessage = (msg: AgentMessage) => {
+    setMessages((prev) => {
+      const updated = [...prev, msg]
+      persist(updated)
+      return updated
+    })
+  }
+
+  const resetStreamState = () => {
+    partsRef.current = []
+    setStreamParts([])
+    isStreamingRef.current = false
+    setIsStreaming(false)
   }
 
   // Read agent token from URL hash on mount
@@ -158,85 +170,61 @@ export function useLocalAgent(config: UseLocalAgentConfig): UseLocalAgentReturn 
           }
 
           case 'text': {
-            setIsStreaming(true)
+            if (!isStreamingRef.current) {
+              isStreamingRef.current = true
+              setIsStreaming(true)
+            }
             const parts = partsRef.current
             const last = parts[parts.length - 1]
             if (last && last.type === 'text') {
-              const updated = [...parts]
-              updated[updated.length - 1] = {
-                type: 'text',
-                content: last.content + data.content,
-              }
-              partsRef.current = updated
+              last.content += data.content
             } else {
-              partsRef.current = [
-                ...parts,
-                { type: 'text', content: data.content },
-              ]
+              parts.push({ type: 'text', content: data.content })
             }
-            setStreamParts(partsRef.current)
+            setStreamParts([...parts])
             break
           }
 
           case 'tool_use': {
-            setIsStreaming(true)
-            partsRef.current = [
-              ...partsRef.current,
-              { type: 'tool_call', name: data.name, input: data.input },
-            ]
-            setStreamParts(partsRef.current)
+            if (!isStreamingRef.current) {
+              isStreamingRef.current = true
+              setIsStreaming(true)
+            }
+            partsRef.current.push({
+              type: 'tool_call',
+              name: data.name,
+              input: data.input,
+            })
+            setStreamParts([...partsRef.current])
             break
           }
 
           case 'tool_result': {
-            let matched = false
-            partsRef.current = partsRef.current.map((p) => {
-              if (
-                !matched &&
-                p.type === 'tool_call' &&
-                p.output === undefined
-              ) {
-                matched = true
-                return { ...p, output: data.output }
+            for (const p of partsRef.current) {
+              if (p.type === 'tool_call' && p.output === undefined) {
+                p.output = data.output
+                break
               }
-              return p
-            })
-            setStreamParts(partsRef.current)
+            }
+            setStreamParts([...partsRef.current])
             break
           }
 
           case 'done': {
             const parts = partsRef.current
             if (parts.length > 0) {
-              const newMsg: AgentMessage = {
-                role: 'assistant',
-                parts,
-              }
-              setMessages((prev) => {
-                const updated = [...prev, newMsg]
-                persist(updated)
-                return updated
-              })
+              appendMessage({ role: 'assistant', parts: [...parts] })
             }
-            partsRef.current = []
-            setStreamParts([])
-            setIsStreaming(false)
+            resetStreamState()
             break
           }
 
           case 'error': {
-            setIsStreaming(false)
-            const errorMsg: AgentMessage = {
+            appendMessage({
               role: 'assistant',
               parts: [{ type: 'text', content: `Error: ${data.message}` }],
-            }
-            setMessages((prev) => {
-              const updated = [...prev, errorMsg]
-              persist(updated)
-              return updated
             })
-            partsRef.current = []
-            setStreamParts([])
+            resetStreamState()
             break
           }
         }
@@ -290,12 +278,7 @@ export function useLocalAgent(config: UseLocalAgentConfig): UseLocalAgentReturn 
     (text: string, model?: AgentModel, thinking?: ThinkingLevel) => {
       if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
 
-      const userMsg: AgentMessage = { role: 'user', content: text }
-      setMessages((prev) => {
-        const updated = [...prev, userMsg]
-        persist(updated)
-        return updated
-      })
+      appendMessage({ role: 'user', content: text })
 
       const msg: ClientMessage = { type: 'chat', text, model, thinking }
       wsRef.current.send(JSON.stringify(msg))
@@ -312,8 +295,7 @@ export function useLocalAgent(config: UseLocalAgentConfig): UseLocalAgentReturn 
 
   const clearHistory = useCallback(() => {
     setMessages([])
-    partsRef.current = []
-    setStreamParts([])
+    resetStreamState()
     persist([])
   }, [])
 

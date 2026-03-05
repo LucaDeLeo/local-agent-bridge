@@ -24,9 +24,14 @@ export async function executeHttp(
     url += separator + params.toString()
   }
 
-  // Build headers
+  // Build body for methods that support it
+  const hasBody = ['POST', 'PUT', 'PATCH'].includes(method)
+  const sendBody = handler.sendBody ?? hasBody
+  const body = sendBody ? JSON.stringify(input) : undefined
+
+  // Build headers — only set Content-Type when sending a body
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(body ? { 'Content-Type': 'application/json' } : {}),
     ...handler.headers,
   }
 
@@ -37,11 +42,6 @@ export async function executeHttp(
       headers[handler.authHeader] = token
     }
   }
-
-  // Build body for methods that support it
-  const hasBody = ['POST', 'PUT', 'PATCH'].includes(method)
-  const sendBody = handler.sendBody ?? hasBody
-  const body = sendBody ? JSON.stringify(input) : undefined
 
   const response = await fetch(url, { method, headers, body })
   const text = await response.text()

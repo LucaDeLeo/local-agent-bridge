@@ -21,6 +21,8 @@ export type JsonSchemaProperty = {
 export type ConvexHandler = {
   type: 'convex'
   functionPath: string
+  /** Convex function type — avoids trial-and-error calls (default: 'query') */
+  functionType?: 'query' | 'mutation' | 'action'
   /** Static args merged into tool input before calling Convex */
   staticArgs?: Record<string, unknown>
 }

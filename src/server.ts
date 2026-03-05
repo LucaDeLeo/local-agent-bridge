@@ -6,7 +6,6 @@ import type {
   BridgeEvent,
   InitMessage,
 } from './protocol'
-import type { ToolDefinition } from './tools/types'
 
 export type ServerOptions = {
   port: number
@@ -105,12 +104,11 @@ export function startServer(options: ServerOptions) {
 
             try {
               log(`Chat: "${msg.text.slice(0, 80)}..."`)
-              for await (const event of state.agent.chat(
-                msg.text,
-                msg.model,
-                msg.thinking,
-                abortController.signal,
-              )) {
+              for await (const event of state.agent.chat(msg.text, {
+                model: msg.model,
+                thinking: msg.thinking,
+                signal: abortController.signal,
+              })) {
                 if (abortController.signal.aborted) break
                 sendEvent(ws, event)
               }
@@ -184,7 +182,7 @@ async function handleInit(
     // Set up Convex client if any tools need it
     let convex: ConvexClient | null = null
     const needsConvex = msg.tools.some(
-      (t: ToolDefinition) => t.handler.type === 'convex',
+      (t) => t.handler.type === 'convex',
     )
 
     if (needsConvex) {

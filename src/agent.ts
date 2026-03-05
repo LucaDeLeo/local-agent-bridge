@@ -61,18 +61,24 @@ export function createBridgeAgent(
   })
 
   const allowedTools = sdkTools.map((t) => `mcp__${serverName}__${t.name}`)
+  const env = { ...process.env, CLAUDECODE: undefined }
 
   return {
     async *chat(
       message: string,
-      model?: AgentModel,
-      thinking?: ThinkingLevel,
-      signal?: AbortSignal,
+      options?: {
+        model?: AgentModel
+        thinking?: ThinkingLevel
+        signal?: AbortSignal
+      },
     ): AsyncGenerator<BridgeEvent> {
-      const selectedModel = model ?? 'claude-sonnet-4-6'
-      const maxThinkingTokens = thinkingToMaxTokens(thinking ?? 'adaptive')
+      const signal = options?.signal
+      const selectedModel = options?.model ?? 'claude-sonnet-4-6'
+      const maxThinkingTokens = thinkingToMaxTokens(
+        options?.thinking ?? 'adaptive',
+      )
       console.log(
-        `[agent] model=${selectedModel} thinking=${thinking ?? 'adaptive'}`,
+        `[agent] model=${selectedModel} thinking=${options?.thinking ?? 'adaptive'}`,
       )
 
       const abortController = signal
@@ -100,7 +106,7 @@ export function createBridgeAgent(
           includePartialMessages: true,
           maxTurns: 10,
           persistSession: false,
-          env: { ...process.env, CLAUDECODE: undefined },
+          env,
           stderr: (data: string) => console.error('[sdk stderr]', data),
           abortController,
         },
