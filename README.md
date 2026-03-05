@@ -1,6 +1,6 @@
 # local-agent-bridge
 
-A generic bridge that lets any web app add a conversational AI sidebar powered by the user's own Anthropic API key. Zero per-token cost to the developer.
+A generic bridge that lets any web app add a conversational AI sidebar powered by the user's existing Claude Code login. No API key needed — it reuses the local Claude Code OAuth session. Zero per-token cost to the developer.
 
 The bridge runs locally on the user's machine, connects to the Anthropic Agent SDK, and exposes a WebSocket server that your frontend connects to via a React hook.
 
@@ -29,7 +29,7 @@ bun add local-agent-bridge
 ### Start the bridge
 
 ```bash
-# Requires ANTHROPIC_API_KEY in environment
+# Uses your existing Claude Code OAuth session — no API key needed
 bunx local-agent-bridge --port=3002 --open=http://localhost:5173 --verbose
 ```
 
@@ -186,7 +186,7 @@ sendMessage('Analyze this data', 'claude-opus-4-6', 'high')
 ## Requirements
 
 - [Bun](https://bun.sh) runtime
-- `ANTHROPIC_API_KEY` environment variable
+- [Claude Code](https://claude.ai/claude-code) installed and logged in (the bridge reuses its OAuth session)
 - React 18+ (for the hook)
 
 ## License
